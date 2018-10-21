@@ -98,6 +98,8 @@ function ENT:Initialize()
 	self:SetBloodColor(DONT_BLEED)
 	self:SetModel(self.Model)
 	self:SetMaterial("models/alyx/emptool_glow")
+	self:SetColor(Color(128,0,0))
+	
 	self:SetRenderMode(RENDERMODE_TRANSALPHA)
 	self:SetRenderFX(kRenderFxHologram)
 	self:SetHealth(self.health)	
@@ -112,12 +114,20 @@ function ENT:Initialize()
 	self:Precache()
 	self:CollisionSetup( self.CollisionSide, self.CollisionHeight, COLLISION_GROUP_PLAYER )
 	self:StartActivity(self.WalkAnim)
+	
+	self.Summons = {}
 	end
 	
 end
 
 function ENT:CustomDeath( dmginfo )
-	if (math.random(1,5) == 1) then
+	for k, v in pairs(self.Summons) do
+		if(v:IsValid()) then
+			v:TakeDamage(100, self, self)
+		end
+	end
+
+	if (math.random(1,8) == 1) then
 		nut.item.spawn("shard_dust", self:GetPos()+ Vector(0,0,20))
 	end
 	SafeRemoveEntity(self)
@@ -158,13 +168,75 @@ function ENT:CustomThinkClient()
 		local pos = self:GetPos() + self:GetUp()
 		local dlight = DynamicLight(self:EntIndex())
 		dlight.Pos = pos
-		dlight.r = 255
-		dlight.g = 255
-		dlight.b = 255
+		dlight.r = 128
+		dlight.g = 0
+		dlight.b = 0
 		dlight.Brightness = 1
 		dlight.Size = 32
 		dlight.Decay = 64
 		dlight.style = 5
 		dlight.DieTime = CurTime() + .1
+	end
+end
+
+ENT.ragdollThink = 0
+function ENT:CustomThink()
+	if(self.ragdollThink < CurTime()) then
+		local search = ents.FindInSphere(self:GetPos(), 1000)
+		for k, v in pairs(search) do
+			if(v:GetClass() == "prop_ragdoll") then
+				ParticleEffectAttach("striderbuster_shotdown_trail", 1, v, 1)
+				v:EmitSound("ambient/machines/electric_machine.wav", 75, 100)
+				timer.Simple(3, function()
+					if(!self) then return end
+					v:EmitSound("ambient/energy/zap" ..math.random(1,3).. ".wav", 75, 50)
+					for i=1,8 do
+						local flesh = ents.Create("flesh_ball") 
+						if flesh:IsValid() then
+							flesh:SetPos( v:GetPos() + Vector(0,0,20) )
+							flesh:SetOwner(self)
+							flesh:Spawn()
+						
+							flesh.DeathTime = CurTime() + 1.5
+			
+							local phys = flesh:GetPhysicsObject()
+							if phys:IsValid() then
+								local ang = self:EyeAngles()
+								ang:RotateAroundAxis(ang:Forward(), math.Rand(-205, 205))
+								ang:RotateAroundAxis(ang:Up(), math.Rand(-205, 205))
+								phys:SetVelocityInstantaneous(ang:Forward() * math.Rand( 200, 250 ))
+							end
+						end
+					end
+					
+					local summon = ents.Create("resp_kuszo")
+					summon:SetPos( v:GetPos() + Vector(0,0,20) )
+					summon:SetOwner(self)
+					summon.pitch = summon.pitch + 50
+					summon:Spawn()
+					
+					summon:SetMaterial("models/props_lab/warp_sheet")
+					summon:SetColor(Color(190,0,0))
+					summon:SetHealth(10)
+					
+					table.insert(self.Summons, summon)
+					
+					v:Remove()
+				end)
+				break
+			end
+		end
+		
+		self.ragdollThink = CurTime() + 5
+	end
+end
+
+function ENT:OnRemove()
+	if(SERVER) then
+		for k, v in pairs(self.Summons) do
+			if(v:IsValid()) then
+				v:Remove()
+			end
+		end
 	end
 end

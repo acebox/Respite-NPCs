@@ -75,7 +75,6 @@ ENT.hitSounds = {
 }
 
 function ENT:Initialize()
-	
 	if( SERVER ) then 
 		self:SetBloodColor(DONT_BLEED)
 		self:SetRenderMode(RENDERMODE_TRANSALPHA)
@@ -83,7 +82,7 @@ function ENT:Initialize()
 		self.loco:SetStepHeight(30)
 		self.loco:SetAcceleration(400)
 		self.loco:SetDeceleration(400)
-		self.loco:SetJumpHeight( 30 )
+		self.loco:SetJumpHeight( 50 )
 	end
 	
 	self:SetHealth(self.health)	
@@ -95,6 +94,28 @@ function ENT:Initialize()
 	self:PhysicsInitShadow(true, true)
 end
 
+--called when the npc is chasing a target
+function ENT:CustomChaseEnemy()
+	if(!self.nextJump) then self.nextJump = CurTime() + math.random(1,5) end
+	
+	if(self.nextJump < CurTime()) then
+		self.loco:SetAcceleration(2000)
+		self.loco:SetDesiredSpeed(500)
+		
+		local temp = function()
+			self.loco:Jump()
+			
+			self.loco:SetAcceleration(900)
+			self.loco:SetDesiredSpeed(self.Speed)
+			
+			self:ResumeMovementFunctions()
+		end
+		
+		self:delay(0.3, temp)
+		
+		self.nextJump = self.nextJump + math.random(5,7)
+	end
+end
 
 function ENT:CustomDeath( dmginfo )
 	if (math.random(1,5) == 1) then

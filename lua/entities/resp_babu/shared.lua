@@ -97,6 +97,7 @@ function ENT:Initialize()
 	self.Flinching = false
 	
 	self.PlayerPositions = {}
+	self.Summons = {}
 end
 
 function ENT:CustomDeath( dmginfo )
@@ -147,7 +148,7 @@ function ENT:CustomChaseEnemy()
 end
 
 function ENT:Summon()
-	posSummons = {
+	local posSummons = {
 		"resp_dolly",
 		"resp_baby"
 	}

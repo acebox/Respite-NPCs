@@ -35,6 +35,8 @@ ENT.DoorAttackRange = 25
 
 ENT.NextAttack = 1.3
 
+ENT.SearchRadius = 500
+
 ENT.AttackFinishTime = 0.8
 
 --Model Settings--
@@ -74,6 +76,8 @@ ENT.RArmFlinch = "flinch_rightarm"
 
 ENT.LLegFlinch = "flinch_leftleg"
 ENT.LArmFlinch = "flinch_leftarm"
+
+ENT.wanderType = 4
 
 --Sounds--
 
@@ -309,6 +313,8 @@ function ENT:WakeUp()
 
 	self.loco:SetDesiredSpeed( self.Speed )
 	self:ResumeMovementFunctions()
+	
+	self.SearchRadius = 2000
 end
 
 function ENT:RunBehaviour()

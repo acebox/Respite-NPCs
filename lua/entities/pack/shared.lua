@@ -28,13 +28,13 @@ ENT.Bone1 = "mixamorig:RightFoot"
 ENT.Bone2 = "mixamorig:LeftFoot"
 
 ENT.CollisionHeight = 50
-ENT.CollisionSide = 11
+ENT.CollisionSide = 6
 
 ENT.Speed = 50
 ENT.WalkSpeedAnimation = 1.0
 
 ENT.health = 100
-ENT.Damage = 2
+ENT.Damage = 8
 
 ENT.PhysForce = 30000
 ENT.AttackRange = 65
@@ -56,7 +56,7 @@ ENT.WalkAnim = "walk1"
 
 ENT.IdleAnim = "idle1"
 
-ENT.AttackAnim = "attack1"
+ENT.AttackAnim = ACT_MELEE_ATTACK1
 
 
 --Sounds--
@@ -69,20 +69,31 @@ ENT.attackSounds = {
 
 ENT.alertSounds = {
 	"dalrp/npc/baby/babyalert.wav",
-	"dalrp/npc/baby/babydie2.wav"
+	"dalrp/npc/baby/babydie.wav",
+	"cof/faster/faster_alert1.wav",
+	"cof/faster/faster_alert2.wav",
+	"cof/faceless/faceless_alert10.wav",
+	"cof/faceless/faceless_alert20.wav",
+	"cof/faceless/faceless_alert30.wav"
 }
 
 ENT.deathSounds = {
-	"dalrp/npc/baby/babydie.wav"
+	"dalrp/npc/baby/babydie2.wav"
 }
 
 ENT.idleSounds = {
 	"soma/npc_soma_proxy/hunt_02.wav",
-	"soma/npc_soma_proxy/idle_close_03.wav" 
+	"soma/npc_soma_proxy/idle_close_03.wav",
+	"dalrp/npc/nurse/nurse_vocal02.wav",
+	"dalrp/npc/nurse/nurse_vocal03.wav",
+	"dalrp/npc/nurse/nurse_vocal08.wav"
 }
 
 ENT.painSounds = {
-	"dalrp/npc/baby/baby_pain1.wav"
+	"dalrp/npc/baby/baby_pain1.wav",
+	"dalrp/npc/nurse/nurse_vocal02.wav",
+	"dalrp/npc/nurse/nurse_vocal03.wav",
+	"dalrp/npc/nurse/nurse_vocal08.wav"
 }
 
 ENT.hitSounds = {
@@ -96,7 +107,8 @@ ENT.missSounds = {
 function ENT:Initialize()
 
 	if SERVER then
-
+	self.loco:SetMaxYawRate(300)
+	
 	--Stats--
 	
 	self:SetModel(self.Model)
@@ -105,7 +117,7 @@ function ENT:Initialize()
 	self.IsAttacking = false
 
 	self.loco:SetStepHeight(35)
-	self.loco:SetAcceleration(400)
+	self.loco:SetAcceleration(900)
 	self.loco:SetDeceleration(900)
 	self:PhysicsInitShadow(true, true)
 	--Misc--
@@ -155,7 +167,7 @@ end
 
 --get mad
 function ENT:Enrage()
-	self.Speed = 250
+	self.Speed = 350
 	self.WalkAnim = "run"
 	self.wanderType = 4
 end

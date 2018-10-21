@@ -100,7 +100,7 @@ end
 function ENT:CustomDeath()
     util.Decal("bloodpool" .. math.random(1,3) .. "", self:GetPos() - Vector(4,4,4), self:GetPos() - Vector(4,4,4))
 	
-	if (math.random(1,4) == 1) then
+	if (math.random(1,5) == 1) then
 		nut.item.spawn("food_monster_meat", self:GetPos()+ Vector(0,0,20))
 	end		
 	

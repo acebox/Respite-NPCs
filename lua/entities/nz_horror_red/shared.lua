@@ -7,10 +7,10 @@ ENT.Spawnable        = false
 ENT.AdminSpawnable   = false
 
 --SpawnMenu--
-list.Set( "NPC", "nz_demon", {
-	Name = "Demon",
-	Class = "nz_demon",
-	Category = "Respite"
+list.Set( "NPC", "nz_horror_red", {
+	Name = "Red Horror",
+	Class = "nz_horror_red",
+	Category = "Respite - Wraith"
 } )
 
 --Stats--
@@ -25,20 +25,22 @@ ENT.Speed = 50
 ENT.WalkSpeedAnimation = 1
 ENT.FlinchSpeed = 0
 
-ENT.health = 50
-ENT.Damage = 5
+ENT.health = 25
+ENT.Damage = 3
 
 ENT.PhysForce = 15000
 ENT.AttackRange = 55
 ENT.DoorAttackRange = 25
 
-ENT.NextAttack = 1
+ENT.NextAttack = 0.1
 ENT.AttackFinishTime = 0.1
 
-ENT.pitch = 85
+ENT.pitch = 150
+
+ENT.SearchRadius = 500
 
 --Model Settings--
-ENT.Model = "models/nh2zombies/friendly.mdl"
+ENT.Model = "models/horror/zm_f4zt.mdl"
 
 ENT.AttackAnim = (ACT_MELEE_ATTACK1)
 ENT.FleshTossAnim = (ACT_IDLE_ON_FIRE)
@@ -51,60 +53,80 @@ ENT.WalkAnim = (ACT_WALK)
 ENT.DoorBreak = Sound("npc/zombie/zombie_pound_door.wav")
 
 ENT.attackSounds = {
-	"npc/demon/nhdemon_fz_frenzy1.wav",
-	"npc/demon/nhdemon_fz_alert_close1.wav"
+	"horror/alert_far1.wav",
+	"horror/alert_far1.wav",
+	"horror/alert_far1.wav"
 }
 
 ENT.alertSounds = {
-	"npc/demon/nhdemon_fz_alert_close1.wav",
-	"npc/demon/nhdemon_fz_alert_far1.wav",
-	"npc/demon/nhdemon_fz_frenzy1.wav",
-	"npc/demon/nhdemon_fz_scream1.wav"
+	"horror/fz_frenzy1.wav",
+	"horror/fz_frenzy2.wav",
+	"horror/fz_frenzy3.wav",
+	"horror/fz_frenzy4.wav",
+	"horror/fz_frenzy5.wav",
+	"horror/fz_frenzy6.wav",
+	"horror/fz_frenzy7.wav"
 }
 
 ENT.deathSounds = {
-	"npc/demon/nhdemon_fz_frenzy1.wav"
+	"horror/die1.wav",
+	"horror/die2.wav",
+	"horror/die3.wav",
+	"horror/die4.wav"
 }
 
 ENT.idleSounds = {
-	"npc/demon/nhdemon_idle1.wav",
-	"npc/demon/nhdemon_idle2.wav",
-	"npc/demon/nhdemon_idle3.wav"
+	"horror/idle1.wav",
+	"horror/idle2.wav",
+	"horror/idle3.wav",
+	"horror/screech.wav"
 }
 
 ENT.painSounds = {
-	"npc/demon/nhdemon_fz_frenzy1.wav"
+	"horror/pain1.wav",
+	"horror/pain2.wav",
+	"horror/pain3.wav",
+	"horror/pain4.wav"
 }
 
 ENT.hitSounds = {
-	"npc/demon/nhdemon_claw_strike3.wav"
+	"horror/warp1.wav",
+	"horror/warp2.wav",
+	"horror/warp3.wav"
 }
 
 ENT.missSounds = {
-	"npc/demon/nhdemon_claw_miss1.wav"
+	"horror/claw_miss1.wav",
+	"horror/claw_miss2.wav"
 }
+
+ENT.RenderGroup = RENDERGROUP_TRANSLUCENT
 
 function ENT:Initialize()
 	
+	self:SetRenderMode(RENDERMODE_TRANSALPHA)
+	self:SetRenderFX(kRenderFxDistort)
+	
 	if SERVER then
-	
-	--Stats--
-	self:SetModel(self.Model)
+		--Stats--
+		self:SetModel(self.Model)
+		self:SetMaterial("models/effects/splode1_sheet")
+		self:SetColor(Color(255,93,0))
+		
+		self:SetHealth(self.health)	
 
-	self:SetHealth(self.health)	
+		self.IsAttacking = false
 
-	self.IsAttacking = false
-
-	self.loco:SetStepHeight(35)
-	self.loco:SetAcceleration(900)
-	self.loco:SetDeceleration(900)
-	
-	self.loco:SetJumpHeight(200)
-	
-	--Misc--
-	self:Precache()
-	self:CollisionSetup( self.CollisionSide, self.CollisionHeight, COLLISION_GROUP_PLAYER )
-	self:StartActivity(ACT_WALK)
+		self.loco:SetStepHeight(35)
+		self.loco:SetAcceleration(1800)
+		self.loco:SetDeceleration(1800)
+		
+		self.loco:SetJumpHeight(90)
+		
+		--Misc--
+		self:Precache()
+		self:CollisionSetup( self.CollisionSide, self.CollisionHeight, COLLISION_GROUP_PLAYER )
+		self:StartActivity(ACT_WALK)
 	end
 	
 end
@@ -115,12 +137,12 @@ function ENT:CustomChaseEnemy()
 	
 	if(self.nextJump < CurTime()) then
 		self.loco:SetAcceleration(2000)
-		self.loco:SetDesiredSpeed(500)
+		self.loco:SetDesiredSpeed(1000)
 		
 		local temp = function()
 			self.loco:Jump()
 			
-			self.loco:SetAcceleration(900)
+			self.loco:SetAcceleration(1800)
 			self.loco:SetDesiredSpeed(self.Speed)
 			
 			self:ResumeMovementFunctions()
@@ -136,9 +158,6 @@ function ENT:CustomDeath( dmginfo )
     util.Decal("bloodpool" .. math.random(1,3) .. "", self:GetPos() - Vector(4,4,4), self:GetPos() - Vector(4,4,4))
 	if (math.random(0,4) == 4) then
 		nut.item.spawn("food_monster_meat", self:GetPos()+ Vector(0,0,20))
-	end
-	if (math.random(0,4) == 4) then
-		nut.item.spawn("hl2_m_monstertalon", self:GetPos()+ Vector(0,0,20))
 	end
 	self:TransformRagdoll( dmginfo )
 end
@@ -171,45 +190,7 @@ function ENT:CustomInjure( dmginfo )
 end
 
 function ENT:FootSteps()
-	self:EmitSound("npc/demon/nhdemon_foot"..math.random(4)..".wav", 70)
-end
-
-function ENT:RangeAttack( ent )
-	
-	if !self:CheckStatus() then return end
-
-	self:RestartGesture(self.FleshTossAnim)
-	self.loco:SetDesiredSpeed(0)
-	self.loco:SetDeceleration(5000)
-	
-	local temp = function()
-		if !self:IsValid() then return end
-		if self:Health() < 0 then return end
-		if !self:CheckStatus() then return end
-		
-		self.loco:SetDesiredSpeed(self.Speed)
-		self.loco:SetDeceleration(900)
-		self:EmitSound("physics/body/body_medium_break"..math.random(2, 4)..".wav", 72, math.Rand(85, 95))	
-
-		for i=1,12 do
-			local flesh = ents.Create("nz_projectile_blood") 
-			if flesh:IsValid() then
-			flesh:SetPos( self:GetPos() + Vector(0,5,50) )
-			flesh:SetOwner(self)
-			flesh:Spawn()
-		
-				local phys = flesh:GetPhysicsObject()
-				if phys:IsValid() then
-				local ang = self:EyeAngles()
-					ang:RotateAroundAxis(ang:Forward(), math.Rand(-30, 30))
-					ang:RotateAroundAxis(ang:Up(), math.Rand(-30, 30))
-					phys:SetVelocityInstantaneous(ang:Forward() * math.Rand(650, 1180))
-				end
-			end
-		end
-	end
-	
-	self:delay(0.75, temp)
+	self:EmitSound("horror/foot"..math.random(4)..".wav", 70)
 end
 
 function ENT:MeleeAttack( ent )
@@ -228,23 +209,36 @@ function ENT:Attack()
 			if !self:CheckStatus() then return end	
 		
 			self:AttackSound()
-		
-			local attack = math.random(1,2)
-			if attack == 1 then self:MeleeAttack( self.Enemy )
-			elseif attack == 2 then self:RangeAttack( self.Enemy )
-			end
-		
+
+			self:MeleeAttack( self.Enemy )
 		end
 		
 		self.NextAttackTimer = CurTime() + self.NextAttack
 	end		
 end
 
+function ENT:CustomThinkClient()
+	if CLIENT then
+		local pos = self:GetPos() + self:GetUp()
+		local dlight = DynamicLight(self:EntIndex())
+		dlight.Pos = pos
+		dlight.r = 64
+		dlight.g = 0
+		dlight.b = 0
+		dlight.Brightness = 1
+		dlight.Size = 64
+		dlight.Decay = 128
+		dlight.style = 5
+		dlight.DieTime = CurTime() + .1
+	end
+end
+
 --get mad
 function ENT:Enrage()
-	self.Speed = 250
+	self.Speed = 750
 	self.WalkAnim = ACT_RUN
 	self.wanderType = 1
+	self.SearchRadius = 2000
 end
 
 function ENT:OnAlert()

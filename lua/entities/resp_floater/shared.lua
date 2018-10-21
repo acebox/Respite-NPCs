@@ -149,7 +149,7 @@ function ENT:Initialize()
 		self.loco:SetStepHeight(30)
 		self.loco:SetAcceleration(400)
 		self.loco:SetDeceleration(400)
-		self.loco:SetJumpHeight( 30 )
+		self.loco:SetJumpHeight( 60 )
 		
 		self:SetHealth(self.health)
 	end
@@ -157,6 +157,34 @@ function ENT:Initialize()
 	self:CollisionSetup( self.CollisionSide, self.CollisionHeight, COLLISION_GROUP_NPC )
 	
     self:PhysicsInitShadow(true, false)
+end
+
+--called when the npc is chasing a target
+function ENT:CustomChaseEnemy()
+	if(!self.Enemy or !IsValid(self.Enemy)) then return end
+
+	if(self:GetRangeSquaredTo(self.Enemy:GetPos()) < 100000) then
+		if(!self.nextJump) then self.nextJump = CurTime() end
+	
+		if(self.nextJump < CurTime()) then
+			self.loco:SetAcceleration(2000)
+			self.loco:SetDesiredSpeed(500)
+				
+			local temp = function()
+				self.loco:FaceTowards(self.Enemy:GetPos())
+				self.loco:Jump()
+				
+				self.loco:SetAcceleration(900)
+				self.loco:SetDesiredSpeed(self.Speed)
+					
+				self:ResumeMovementFunctions()
+			end
+				
+			self:delay(0.3, temp)
+			
+			self.nextJump = self.nextJump + math.random(5,10)
+		end
+	end
 end
 
 function ENT:CustomDeath()

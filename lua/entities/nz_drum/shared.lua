@@ -34,7 +34,7 @@ ENT.health = 600
 ENT.Damage = 45
 ENT.HitPerDoor = 2
 
-ENT.PhysForce = 30000
+ENT.PhysForce = 100000
 ENT.AttackRange = 120
 ENT.InitialAttackRange = 110
 ENT.DoorAttackRange = 100
@@ -116,16 +116,12 @@ function ENT:Initialize()
 	--Misc--
 	self:Precache()
 	self:CollisionSetup( self.CollisionSide, self.CollisionHeight, COLLISION_GROUP_PLAYER )
+	self.Summons = {}
+	
 	end
 end
 
 function ENT:CustomDeath( dmginfo )
-	for k, v in pairs(self.Summons) do
-		if(v:IsValid()) then
-			v:TakeDamage(100, self, self)
-		end
-	end
-
 	nut.item.spawn("food_monster_meat", self:GetPos()+ Vector(0,0,20))
 	nut.item.spawn("food_monster_meat", self:GetPos()+ Vector(0,0,20))
 	nut.item.spawn("food_monster_meat", self:GetPos()+ Vector(0,0,20))
@@ -136,16 +132,18 @@ function ENT:CustomDeath( dmginfo )
 end
 
 function ENT:ThrowGrenade( velocity )
-	posSummons = {}
+	local posSummons = {}
 	posSummons[1] = "nz_thrower"
 	posSummons[2] = "nz_freak"
+	posSummons[3] = "spore"
+	posSummons[4] = "freak"
 
 	local ent = ents.Create(table.Random(posSummons))
 	
 	table.insert(self.Summons, ent)
 	
 	if ent:IsValid() and self:IsValid() then
-		ent:SetPos(self:EyePos() + Vector(0,0,15) - ( self:GetRight() * 25 ) + ( self:GetForward() * 10 ) )
+		ent:SetPos(self:EyePos() + Vector(0,0,40) - ( self:GetRight() * 25 ) + ( self:GetForward() * 20 ) )
 		ent:Spawn()
 		ent:SetMaterial("models/flesh")
 		ent:SetColor( Color( 130, 220, 130, 255 ) )
@@ -155,10 +153,6 @@ function ENT:ThrowGrenade( velocity )
 				ent:SetEnemy(self.Enemy)
 			end
 		)
-
-		local ang = self:EyeAngles()
-		ang:RotateAroundAxis(ang:Forward(), math.Rand(-10, 10))
-		ang:RotateAroundAxis(ang:Up(), math.Rand(-10, 10))
 
 		self:AttackSound()
 		util.Decal("bloodpool" .. math.random(1,3) .. "", self:GetPos() - Vector(4,4,4), self:GetPos() - Vector(4,4,4))
@@ -176,10 +170,9 @@ function ENT:CustomChaseEnemy()
 	
 	if self:IsLineOfSightClear( enemy ) then
 	
-		if (table.Count(self.Summons) < 5 and self:GetRangeTo( enemy ) > self.InitialAttackRange and self:GetRangeTo( enemy ) < 600) then
+		if (table.Count(self.Summons) < 5 and self:GetRangeTo( enemy ) > self.InitialAttackRange and self:GetRangeTo( enemy ) < 1000) then
 		
 			if ( self.NextThrow or 0 ) < CurTime() then
-	
 				self:RestartGesture( ACT_GMOD_GESTURE_TAUNT_ZOMBIE )
 				self.Throwing = true
 	
@@ -226,9 +219,17 @@ function ENT:EnrageSound()
 end
 
 function ENT:OnRemove()
-	for k, v in pairs(self.Summons) do
-		if(v:IsValid()) then
-			v:Remove()
+	if(self:Health() > 0) then
+		for k, v in pairs(self.Summons) do
+			if(v:IsValid()) then
+				v:Remove()
+			end
+		end
+	else
+		for k, v in pairs(self.Summons) do
+			if(v:IsValid()) then
+				v:TakeDamage(100, self, self)
+			end
 		end
 	end
 end
@@ -247,4 +248,20 @@ function ENT:Attack()
 		
 		self.NextAttackTimer = CurTime() + self.NextAttack
 	end	
+end
+
+--called when a prop is being attacked
+function ENT:CustomPropAttack( ent )
+	if ( self.NextPropAttackTimer or 0 ) < CurTime() then
+		self:AttackSound()
+		self.loco:SetDeceleration(0)
+		self.IsAttacking = true
+		
+		self:RestartGesture(self.AttackAnim)
+		
+		self:AttackEffect( self.AttackFinishTime, ent, self.Damage, 1, 1 )
+		self.loco:SetDeceleration(900)
+		
+		self.NextPropAttackTimer = CurTime() + self.NextAttack
+	end
 end

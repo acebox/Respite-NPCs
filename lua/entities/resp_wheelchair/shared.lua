@@ -218,7 +218,7 @@ end
 function ENT:Effects()
 	for P=1, #player.GetAll() do
 		local ply = player.GetAll()[P]
-		
+
 		--[[
 		if(SERVER) then
 			if(HorrorMonsterPlayerEffectTime<CurTime()) then
@@ -257,7 +257,7 @@ function ENT:Effects()
 			end
 		end
 		--]]
-				
+		
 		if(ply:GetNWFloat("MayhemHorrorNPCEffects",0)>0) then 
 
 			if(SERVER) then

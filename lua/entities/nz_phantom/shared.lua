@@ -25,7 +25,7 @@ ENT.Speed = 30
 ENT.WalkSpeedAnimation = 1
 ENT.FlinchSpeed = 0
 
-ENT.health = 110
+ENT.health = 250
 ENT.Damage = 10
 
 ENT.PhysForce = 15000

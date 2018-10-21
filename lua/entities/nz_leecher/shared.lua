@@ -15,7 +15,7 @@ list.Set( "NPC", "nz_leecher", {
 
 --Stats--
 ENT.CollisionHeight = 70
-ENT.CollisionSide = 7
+ENT.CollisionSide = 30
 ENT.MoveType = 2
 
 ENT.UseFootSteps = 1
@@ -87,7 +87,9 @@ ENT.alertSounds = {
 ENT.idleSounds = {
 	"deadzone/lepotitsa/pain1.wav",
 	"deadzone/lepotitsa/pain2.wav",
-	"deadzone/lepotitsa/attack4.wav"
+	"deadzone/lepotitsa/attack4.wav",
+	"dalrp/npc/leecher/leecher_vocal01.wav",
+	"dalrp/npc/leecher/leecher_vocal02.wav"
 }
 
 ENT.painSounds = {

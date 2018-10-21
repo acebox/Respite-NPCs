@@ -43,8 +43,6 @@ ENT.FallDamage = 0
 --gross timer things that don't really need to be up here
 ENT.nextWander = 0
 ENT.nextIdle = 0
-ENT.nextPainSound = 0
-ENT.nextStep = 0
 ENT.retargetTime = 0
 
 ENT.OldEnemy = nil --used for a check for retargetting
@@ -84,6 +82,9 @@ ENT.idleSounds = {}
 ENT.painSounds = {}
 ENT.hitSounds = {}
 ENT.missSounds = {}
+
+ENT.chance = true --just stupid thing i put in to make it easier to check if it's on this base
+ENT.team = 0 --if an npc's team is different than another's, they will fight each other.
 
 --caches most of the npc's things.
 function ENT:Precache()
@@ -175,20 +176,33 @@ function ENT:SpawnFunction( ply, tr, ClassName )
 	local ent = ents.Create( Class )
 		ent:SetPos( SpawnPos )
 		ent:Spawn()
-
 	end
 
 	return ent
-
 end
 
 --main think function
 function ENT:Think()
 	self:CustomThinkClient() --used for clientside things
-
+	
 	if not SERVER then return end
+	
+	if(!self.timers) then
+		self.timers = {}
+	end	
+	
 	if !IsValid(self) then return end
 
+	--this is confusing but it basically goes through the table of active timers, and runs them when it is time.
+	if(self.timers) then
+		for k, v in pairs(self.timers) do
+			if(k < CurTime()) then
+				v()
+				self.timers[k] = nil
+			end
+		end
+	end	
+	
 	self:CustomThink()
 
 	-- Step System --
@@ -200,43 +214,53 @@ function ENT:Think()
 
 	-- First Step
         local bones = self:LookupBone(self.Bone1)
+		if(bones) then
+			local pos, ang = self:GetBonePosition(bones)
 
-        local pos, ang = self:GetBonePosition(bones)
+			local tr = {}
+			tr.start = pos
+			tr.endpos = tr.start - ang:Right()* self.FootAngles + ang:Forward()* self.FootAngles2
+			tr.filter = self
+			tr = util.TraceLine(tr)
 
-        local tr = {}
-        tr.start = pos
-        tr.endpos = tr.start - ang:Right()* self.FootAngles + ang:Forward()* self.FootAngles2
-        tr.filter = self
-        tr = util.TraceLine(tr)
+			if tr.Hit && !self.FeetOnGround then
+				self:FootSteps()
+			end
 
-        if tr.Hit && !self.FeetOnGround then
-			self:FootSteps()
-        end
+			self.FeetOnGround = tr.Hit
 
-        self.FeetOnGround = tr.Hit
+		-- Second Step
+			local bones2 = self:LookupBone(self.Bone2)
 
-	-- Second Step
-		local bones2 = self:LookupBone(self.Bone2)
+			local pos2, ang2 = self:GetBonePosition(bones2)
 
-        local pos2, ang2 = self:GetBonePosition(bones2)
+			local tr = {}
+			tr.start = pos2
+			tr.endpos = tr.start - ang2:Right()* self.FootAngles + ang2:Forward()* self.FootAngles2
+			tr.filter = self
+			tr = util.TraceLine(tr)
 
-        local tr = {}
-        tr.start = pos2
-        tr.endpos = tr.start - ang2:Right()* self.FootAngles + ang2:Forward()* self.FootAngles2
-        tr.filter = self
-        tr = util.TraceLine(tr)
+			if tr.Hit && !self.FeetOnGround2 then
+						self:FootSteps()
+			end
 
-        if tr.Hit && !self.FeetOnGround2 then
-					self:FootSteps()
-        end
+			self.FeetOnGround2 = tr.Hit
+		end
+		
+		self:NPCHate()
+	end
+end
 
-        self.FeetOnGround2 = tr.Hit
+function ENT:NPCHate()
+	local enemy = ents.FindByClass( "npc_*" ) --Find any spawned entity in map with class beginning at npc
+	for _, x in pairs( enemy ) do --for every found entity do
+		if !x:IsNPC() then return end -- if found entity is not NPC then do nothing
+		x:AddEntityRelationship(self, D_HT, 99) -- found entity will hate self entity
 	end
 end
 
 --main attack function. Plays animation, damage handled in AttackEffect
 function ENT:Attack()
-
 	if ( self.NextAttackTimer or 0 ) < CurTime() then	
 		
 		if ( (self.Enemy:IsValid() and self.Enemy:Health() > 0 ) ) then
@@ -270,8 +294,8 @@ function ENT:CustomAttack()
 end
 
 --handles damaging, missing, and other on hit effects
-function ENT:AttackEffect( time, ent, dmg, type, reset )
-	timer.Simple(time, function() 
+function ENT:AttackEffect(waitTime, ent, dmg, type, reset )
+	local function temp()
 		if !self:IsValid() then return end
 		if self:Health() < 0 then return end
 		if !self:CheckValid( ent ) then return end
@@ -304,24 +328,24 @@ function ENT:AttackEffect( time, ent, dmg, type, reset )
 					ent:EmitSound(self.DoorBreak)
 				end
 			elseif type == 2 then
-				if ent != NULL and ent.Hitsleft != nil then
-					if ent.Hitsleft > 0 then
-						ent.Hitsleft = ent.Hitsleft - self.HitPerDoor	
+				if ent != NULL and ent.hitsLeft != nil then
+					if ent.hitsLeft > 0 then
+						ent.hitsLeft = ent.hitsLeft - self.HitPerDoor	
 						ent:EmitSound(self.DoorBreak)
 					end
 				end
 			end
 							
 		else	
-			--self:EmitSound("npc/infected_zombies/claw_miss_"..math.random(2)..".wav", math.random(75,95), math.random(65,95))
 			self:MissSound()
-		end
-		
-	end)
-
+		end	
+	end
+	
+	self:delay(waitTime, temp)
+	
 	--resumes movement for the npc after the attack.
 	if reset == 1 then
-		timer.Simple( time + 0.6, function()
+		local function temp()
 			if !self:IsValid() then return end
 			if self:Health() < 0 then return end
 			if !self:CheckValid( ent ) then return end
@@ -329,8 +353,23 @@ function ENT:AttackEffect( time, ent, dmg, type, reset )
 			
 			self.IsAttacking = false
 			self:ResumeMovementFunctions()
-		end)
+		end
+	
+		self:delay(waitTime + 0.6, temp)
 	end
+end
+
+function ENT:delay(delayTime, delayedFunc)
+	--example of how to use this weird thing
+	--[[
+		local function temp()
+			print("frogs")
+		end
+		
+		self:delay(1, temp)	
+	--]]
+
+	self.timers[CurTime() + delayTime] = delayedFunc
 end
 
 --turns the npc into a ragdoll (used when its killed.)
@@ -385,6 +424,8 @@ function ENT:TransformRagdoll( dmginfo )
 	end
 	
 	SafeRemoveEntity( self )
+	
+	--used a regular timer for this since the npc itself is gone? Not sure if it'll screw with anything.
 	timer.Simple(self.corpseTime, 
 		function()
 			SafeRemoveEntity( ragdoll )
@@ -409,7 +450,8 @@ end
 --used for playing footsteps when ENT.UseFootSteps = 2
 function ENT:FootStepThink()
 	if(self.UseFootSteps == 2) then
-		if self.nextStep < CurTime() then
+		if(!self.nextStep) then self.nextStep = 0 end
+		if (self.nextStep < CurTime()) then
 			self:FootSteps()
 			self.nextStep = CurTime() + self.FootStepTime
 		end
@@ -552,7 +594,7 @@ end
 function ENT:Idle()
 	if(self.nextIdle < CurTime()) then
 		self.oldVol = self.volume
-		self.volume = self.volume/2
+		self.volume = self.volume/2 --makes it so they arent as loud when they're just hiding in a corner
 		self:IdleSound()
 		self.volume = self.oldVol
 		self.oldVol = nil
@@ -582,7 +624,7 @@ end
 function ENT:SpawnIn()
 	local nav = navmesh.GetNearestNavArea(self:GetPos())
 	
-	if !self:IsInWorld() or !IsValid(nav) or nav:GetClosestPointOnArea(self:GetPos()):DistToSqr(self:GetPos()) >= 10000 then 
+	if !self:IsInWorld() or !IsValid(nav) or nav:GetClosestPointOnArea(self:GetPos()):DistToSqr(self:GetPos()) >= 20000 then 
 		ErrorNoHalt("Nextbot ["..self:GetClass().."] spawned too far away from a navmesh!")
 		SafeRemoveEntity(self)
 	end 
@@ -603,6 +645,7 @@ function ENT:RunBehaviour()
 		local enemy = self:HaveEnemy()
 		
 		if (enemy and enemy:IsValid() and enemy:Health() > 0) then --if we have an enemy, chase him
+		
 			self.Hiding = false
 			
 			pos = enemy:GetPos()
@@ -652,13 +695,12 @@ end
 
 --follow enemy, if he runs out of sight, go to where we last saw him.
 function ENT:ChaseEnemy( pos, options )
-
 	local enemy = self:HaveEnemy()
 	local options = options or {}
 	local path = Path( "Follow" )
 	path:SetMinLookAheadDistance( options.lookahead or 300 )
 	path:SetGoalTolerance( options.tolerance or 20 )
-
+	
 	if !enemy:IsValid() then return end
 	if enemy:Health() < 0 then return end
 
@@ -680,7 +722,7 @@ function ENT:ChaseEnemy( pos, options )
 			self:HandleStuck()
 			return "stuck"
 		end
-
+		
 		if (enemy and enemy:IsValid()) then
 			if(!self.Persistent) then
 				if(self:CanSeePlayer(enemy)) then
@@ -723,12 +765,13 @@ function ENT:ChaseEnemy( pos, options )
 
 		if ( options.repath ) then
 			if ( path:GetAge() > options.repath ) then 
+			
 				if(!self.OldPos) then
 					break
 				end
 			
 				--if it reaches the target location
-				if(self:GetPos():DistToSqr(self.OldPos) < 100 * 100) then
+				if(self:GetPos():DistToSqr(self.OldPos) < 10000) then
 					break
 				end
 			
@@ -747,15 +790,14 @@ function ENT:ChaseEnemy( pos, options )
 	return "ok"
 end
 
---pathing function, tells it to go somewhere
+--pathing function, tells it to go somewhere specific
 function ENT:GoToLocation(location, options)
-
 	if(!util.IsInWorld(location)) then return end
 
 	local options = options or {}
 
 	local path = Path("Follow")
-	path:SetMinLookAheadDistance(10000)
+	path:SetMinLookAheadDistance(300)
 	path:SetGoalTolerance(10)
 
 	path:Compute(self, location)
@@ -763,6 +805,11 @@ function ENT:GoToLocation(location, options)
 	if (!path:IsValid()) then return "failed" end
 	
 	while (path:IsValid() and location) do
+		local nav = navmesh.GetNearestNavArea(location)
+		if(!IsValid(nav) or nav:GetClosestPointOnArea(location):DistToSqr(location) > 100 * 100) then
+			break
+		end
+	
 		if(self:HaveEnemy()) then --if found a target
 			break
 		end
@@ -789,23 +836,24 @@ function ENT:GoToLocation(location, options)
 			location = self:GetPos() + Vector(math.Rand( -1, 1 ), math.Rand( -1, 1 ), 0 ) * 1000
 			
 			local nav = navmesh.GetNearestNavArea(location)
-			if(!IsValid(nav) or nav:GetClosestPointOnArea(location):DistToSqr(location) > 100 * 100) then
+			if(!IsValid(nav) or nav:GetClosestPointOnArea(location):DistToSqr(location) > 10000) then
 				break
 			end
 			
 			path:Compute(self, location)
-			timer.Simple(1, 
-				function()
-					location = oldLoc
-					path:Compute(self, location)
-					self.Stuck = false
-				end
-			)
+			
+			local function temp()
+				location = oldLoc
+				path:Compute(self, location)
+				self.Stuck = false
+			end
+			
+			self:delay(1, temp)
 		end
 		
 		path:Update(self)
 
-		if (self:GetPos():DistToSqr(location) < 50 * 50) then break end
+		if (self:GetPos():DistToSqr(location) < 2500) then break end
 		
 		coroutine.yield()
 	end
@@ -832,13 +880,6 @@ function ENT:Wander(pos, options)
 
 	while (path:IsValid() and !self:HaveEnemy()) do
         local zombiePosition = self:GetPos()
-
-		--[[
-		while(!util.IsInWorld(pos)) do
-			pos = zombiePosition + Vector(math.Rand( -1, 1 ), math.Rand( -1, 1 ), 0 ) * 1000
-			path:Compute(self, pos)
-		end
-		--]]
 		
 		if (!self.Stuck and self.loco:IsStuck()) then
 			self.Stuck = true
@@ -852,11 +893,12 @@ function ENT:Wander(pos, options)
 			end
 			
 			path:Compute(self, location)
-			timer.Simple(1, 
-				function()
-					self.Stuck = false
-				end
-			)
+			
+			local function temp()
+				self.Stuck = false
+			end
+			
+			self:delay(1, temp)
 		end
 
 		self:DoorStuck(true)
@@ -892,7 +934,7 @@ function ENT:Wander(pos, options)
 end
 
 --called when stuck on a door.
-function ENT:DoorStuck(openNormal)
+function ENT:DoorStuck(openNormal) --DOORS STUCK
 	if(!self.nextSample or !self.stuckPosition) then
 		self.nextSample = 0
 		self.stuckPosition = 0
@@ -928,7 +970,6 @@ function ENT:GetDoor(ent)
 		"models/props_radiostation/radio_metaldoor01c.mdl",
 	}
 
-
 	for k,v in pairs( doors ) do
 		if !IsValid( ent ) then break end
 		if ent:GetModel() == v and string.find(ent:GetClass(), "door") then
@@ -951,8 +992,8 @@ function ENT:AttackDoor(openNormal)
 						continue
 					end
 					
-					if v.Hitsleft == nil then
-						v.Hitsleft = 8
+					if v.hitsLeft == nil then
+						v.hitsLeft = 8
 					end
 
 					if(openNormal) then
@@ -960,7 +1001,7 @@ function ENT:AttackDoor(openNormal)
 						return
 					end
 					
-					if v != NULL and v.Hitsleft > 0 then
+					if v != NULL and v.hitsLeft > 0 then
 
 						if (self:GetRangeTo(v) < (self.DoorAttackRange)) then
 
@@ -976,7 +1017,7 @@ function ENT:AttackDoor(openNormal)
 
 					end
 
-					if v != NULL and v.Hitsleft < 1 then
+					if v != NULL and v.hitsLeft < 1 then
 						self:ProcessDoor(v)
 					end
 						
@@ -1013,6 +1054,7 @@ function ENT:ProcessDoor(door)
 	door.oldGroup = door:GetCollisionGroup() --store old collision group of door
 	door:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE) --set door to not collide with anything at all
 	
+	--didnt use entity delay function for this, because we still want it to happen even if the npc is dead, hopefully it doesn't break anything. Might be done better soemwhere else.
 	timer.Simple(600, function() -- "respawn" the door by making it visible again, and deleting the dummy prop.
 		local sEffect = ents.Create("info_particle_system")
 		sEffect:SetKeyValue("effect_name", "vortigaunt_charge_token")
@@ -1029,6 +1071,8 @@ function ENT:ProcessDoor(door)
 
 		SafeRemoveEntity(prop)
 	end)
+	
+	--self:delay(600, temp)
 end
 
 --called when the npc is chasing a target
@@ -1082,20 +1126,9 @@ end
 function ENT:CheckProp( ent )
 	if !ent:IsValid() then return end
 
-	if ent:GetPhysicsObject():GetVolume() < 2600 then
-		if (phys != nil && phys != NULL && phys:IsValid() ) then
-
-		if ent:GetModel() == "models/props_debris/wood_board06a.mdl" or ent:GetModel() == "models/props_debris/wood_board05a.mdl" or ent:GetModel() == "models/props_debris/wood_board05a.mdl" then
-			return true
-		elseif ent:GetModel() == "models/props_debris/wood_board05a.mdl" or ent:GetModel() == "models/props_debris/wood_board04a.mdl" or ent:GetModel() == "models/props_debris/wood_board03a.mdl" then
-			return true
-		elseif ent:GetModel() == "models/props_debris/wood_board07a.mdl" or ent:GetModel() == "models/props_debris/wood_board02a.mdl" then
-			return true
-		end
-
-		end
-		return false
-	end
+	if !ent:GetPhysicsObject() then return end
+	if !ent:GetPhysicsObject():IsValid() then return end
+	if ent:GetPhysicsObject():GetMass() > 2600 then return end
 
 	return true
 end
@@ -1105,11 +1138,19 @@ function ENT:AttackObject()
 	local entstoattack = ents.FindInSphere(self:GetPos(), 25)
 	for _,v in pairs(entstoattack) do
 
+	
 		if ( v:GetClass() == "func_breakable" or v:GetClass() == "func_physbox" or v:GetClass() == "prop_physics_multiplayer" or v:GetClass() == "prop_physics" or v:GetClass() == "nut_storage") then
-		if v.FalseProp then return end
-		if !self:CheckProp( v ) then return end
+			--[[
+			local physObj = v:GetPhysicsObject()
+			if(physObj and physObj:IsValid() and !physObj:IsMotionEnabled() and physObj:GetMass() > 10000) then
+				return
+			end
+			--]]
+			
+			if v.FalseProp then return end
+			if !self:CheckProp( v ) then return end
 
-		self:CustomPropAttack( v )
+			self:CustomPropAttack( v )
 
 			return true
 		end
@@ -1117,9 +1158,10 @@ function ENT:AttackObject()
 	return false
 end
 
-ENT.nextBurn = 0
 --called when the npc catches on fire
 function ENT:OnIgnite()
+	if(!self.nextBurn) then self.nextBurn = 0 end
+
 	if(self.nextBurn < CurTime()) then
 		self:PainSound() --ow
 		self.nextBurn = CurTime() + 5
@@ -1203,36 +1245,38 @@ function ENT:OnInjured( dmginfo )
 	elseif(self:GetBloodColor() == BLOOD_COLOR_GREEN) then
 		self:BleedVisual( 0.3, dmginfo:GetDamagePosition(), "green")	
 	
-	elseif(self:GetBloodColor() == DONT_BLEED and string.find(self:GetClass(), "shade") or string.find(self:GetClass(), "wraith") or self.wraith) then
+	elseif(self:GetBloodColor() == DONT_BLEED and (string.find(self:GetClass(), "shade") or string.find(self:GetClass(), "wraith") or self.wraith)) then
 		self:BleedVisual( 0.3, dmginfo:GetDamagePosition(), "none")	
 	end
 	
 	--if attacked with no enemy
 	if (!self:HaveEnemy() and (player or npc)) then
-		if self:IsValid() and self:Health() > 0 then
-			self.loco:FaceTowards( attacker:GetPos() )
-			self.loco:FaceTowards( attacker:GetPos() )
-			self.loco:FaceTowards( attacker:GetPos() )
-			self.loco:FaceTowards( attacker:GetPos() )
-			self:SetEnemy(attacker)
-			self.OldPos = attacker:GetPos()
+		if (self:IsValid() and self:Health() > 0) then
+			local temp = function()
+				self:SetEnemy(attacker)
+				self.loco:FaceTowards(attacker:GetPos())
+			end
+			self:delay(0.05, temp) --makes the reaction more reliable for some reason.
 		end
 	end
 
+	--other npcs hear pain sounds.
+	if(!self.nextPainSound) then self.nextPainSound = 0 end
 	if (self.nextPainSound < CurTime()) then
 		self:PainSound()
-		
-		if(!self:GetEnemy()) then
-			--sound of pain alerts other npcs
-			local nearby = ents.FindInSphere(self:GetPos(), 1000)
-			for k, v in pairs(nearby) do
-				if (baseclass.Get(v:GetClass()).Base == "chance_base" and v != self) then
-					v.loco:FaceTowards( attacker:GetPos() )
-					v.loco:FaceTowards( attacker:GetPos() )
-					v.loco:FaceTowards( attacker:GetPos() )
-					v.loco:FaceTowards( attacker:GetPos() )
+	
+		local nearby = ents.FindInSphere(self:GetPos(), 400)
+		for k, v in pairs(nearby) do
+			if(v.chance and v != self) then
+				if(!v:GetEnemy()) then
 					v:SetEnemy(attacker)
-					v.OldPos = attacker:GetPos()
+					local temp = function()
+						if(IsValid(attacker)) then
+							v:SetEnemy(attacker)
+							v.loco:FaceTowards(attacker:GetPos())
+						end
+					end
+					v:delay(0.05, temp) --makes the reaction more reliable for some reason.
 				end
 			end
 		end
@@ -1248,7 +1292,7 @@ function ENT:OnInjured( dmginfo )
 	
 	--slashing damage reduced
 	if ( dmginfo:IsDamageType(DMG_SLASH) ) then
-		dmginfo:ScaleDamage(0.75)
+		dmginfo:ScaleDamage(0.7)
 	end	
 	
 	--bullet damage increased
@@ -1282,20 +1326,21 @@ function ENT:BuddyKilled( victim, attacker )
 	self.OldPos = attacker:GetPos()
 	
 	--after awhile of searching with no results, they calm down and run the calm function.
-	timer.Simple(10, 
-		function()
-			if(self:IsValid() and !self.Enemy) then
-				self:Calm()
-			end
+
+	local function temp()
+		if(IsValid(self) and !self:GetEnemy()) then
+			self:Calm()
 		end
-	)
+	end
+	
+	self:delay(30, temp)
 end
 
 --called when another npc dies
 function ENT:OnOtherKilled( victim, dmginfo )
 	if (!self:HaveEnemy()) then --if no enemy, go attack that dude
-		if (baseclass.Get(victim:GetClass()).Base == "chance_base") and victim != self then
-			if(self:GetPos():DistToSqr(victim:GetPos()) < (self.SearchRadius * 1.5) * (self.SearchRadius) * 1.5) then
+		if (victim.chance and victim != self) then
+			if(self:GetPos():DistToSqr(victim:GetPos()) < (self.SearchRadius) * (self.SearchRadius) * 3) then
 				local attacker = dmginfo:GetAttacker()
 				
 				if(attacker:IsPlayer() or attacker:IsNPC()) then
@@ -1313,7 +1358,7 @@ end
 
 --attempts to set the current enemy.
 function ENT:SetEnemy( ent )
-	if(!ent) then 
+	if(!ent) then
 		return nil 
 	end
 	
@@ -1332,22 +1377,20 @@ function ENT:SetEnemy( ent )
 	return ent
 end
 
---whether or not the npc can see the supplied position
+--whether or not the npc can see the supplied position (I didnt make this)
 function ENT:CanSeePos( pos1, pos2, filter )
-	local trace = { };
-	trace.start = pos1;
-	trace.endpos = pos2;
-	trace.filter = filter;
-	trace.mask = MASK_SOLID + CONTENTS_WINDOW + CONTENTS_GRATE;
-	local tr = util.TraceLine( trace );
+	local trace = {}
+	trace.start = pos1
+	trace.endpos = pos2
+	trace.filter = filter
+	trace.mask = MASK_SOLID + CONTENTS_WINDOW + CONTENTS_GRATE
+	local tr = util.TraceLine( trace )
 	
 	if( tr.Fraction == 1.0 ) then
-		
-		return true;
-		
+		return true
 	end
 	
-	return false;
+	return false
 end
 
 --whether or not the npc can see the supplied player.
@@ -1357,7 +1400,6 @@ end
 
 --finds the closest player
 function ENT:FindClosestPlayer()
-	
 	local closest = nil;
 	local dist = math.huge;
 	
@@ -1376,16 +1418,27 @@ end
 --searches for an enemy
 function ENT:SearchForEnemy( ents )
 	for k,v in pairs( ents ) do
-		if !self:CheckTargetMethod() then return end
-
 		if (v:IsPlayer() and v:Alive() and v:GetMoveType() != MOVETYPE_NOCLIP) then
+			local char = v:getChar()
+			if(char) then
+				if (char:getFaction() == FACTION_ABOM) then
+					continue --ignore abominations
+				end
+			end
+		
 			if(self:CanSeePlayer(v)) then
 				return self:SetEnemy(v)
 			end
-		end
-		
-		if (v:IsNPC() and v:Health() > 0 and baseclass.Get(v:GetClass()) != "chance_base") then
-			return self:SetEnemy(v)
+		elseif(v:IsNPC()) then
+			if(self:CanSeePlayer(v)) then
+				return self:SetEnemy(v)
+			end
+		elseif(v.chance and v.team != self.team) then --team variable allows nextbots to fight each other.
+			if(self:CanSeePlayer(v)) then
+				return self:SetEnemy(v)
+			end
+		--elseif(v:IsRagdoll()) then --for them to go after and eat up corpses 
+
 		end
 	end
 
@@ -1400,7 +1453,7 @@ end
 --checks if we have an enemy, if we don't, try to find one. If we can't find one, we got nothing.
 function ENT:HaveEnemy()
 	local enemy = self:GetEnemy()
-
+	
 	if(!enemy or !enemy:IsValid()) then
 		return self:FindEnemy()
 	end
@@ -1427,7 +1480,8 @@ end
 function ENT:Enrage()
 end
 
-function ENT:Calm() --unenrage
+--this is what happens when enrage wears off
+function ENT:Calm()
 end
 
 --called when the npc spots an enemy or changes targets
@@ -1438,12 +1492,7 @@ end
 function ENT:CustomThinkClient()
 end
 
---old function, not used for now.
-function ENT:CheckTargetMethod()
-	return true --just true for now
-end
-
---makes npcs look like different, call in OnSpawn()
+--makes npcs look like different, called in OnSpawn()
 function ENT:Shadow()
 	--you need to put ENT.RenderGroup = RENDERGROUP_TRANSLUCENT
 	--for this to work properly

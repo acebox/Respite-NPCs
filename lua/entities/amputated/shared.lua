@@ -16,9 +16,6 @@ list.Set( "NPC", "amputated", {
 ENT.classname = "amputated"
 ENT.NiceName = "Amputated"
 
-ENT.CollisionHeight = 80
-ENT.CollisionSide = 20
-
 ENT.MoveType = 3
 
 ENT.UseFootSteps = 1

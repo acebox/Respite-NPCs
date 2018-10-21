@@ -170,7 +170,12 @@ function ENT:CustomDeath( dmginfo )
 	nut.item.spawn("j_scrap_memory", self:GetPos()+ Vector(0,0,20))
 	nut.item.spawn("j_scrap_memory", self:GetPos()+ Vector(0,0,20))
 	nut.item.spawn("j_scrap_memory", self:GetPos()+ Vector(0,0,20))
-
+	nut.item.spawn("j_scrap_memory", self:GetPos()+ Vector(0,0,20))
+	
+	if(math.random(0,1) == 1) then
+		nut.item.spawn("shard_dust", self:GetPos()+ Vector(0,0,20))
+	end
+	
 	SafeRemoveEntity(self)
 end
 
@@ -309,7 +314,7 @@ function ENT:Shout()
 	self.loco:SetDesiredSpeed( 0 )
 end
 
-function ENT:Summon( )
+function ENT:Summon()
 	posSummons = {
 		"resp_babu_broken",
 		"nz_haunt"

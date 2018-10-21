@@ -2,7 +2,7 @@ if ( SERVER ) then
 	AddCSLuaFile( "shared.lua" )
 end
 
-ENT.Base             = "chance_base"
+ENT.Base             = "scarlet"
 ENT.Spawnable        = false
 ENT.AdminSpawnable   = false
 
@@ -18,10 +18,11 @@ ENT.NiceName = "Scarlet"
 --Stats--
 ENT.MoveType = 2
 
-ENT.UseFootSteps = 1
+ENT.UseFootSteps = 2
+ENT.FootStepTime = 0.6
 
-ENT.FootAngles = 10
-ENT.FootAngles2 = 10
+ENT.FootAngles = 90
+ENT.FootAngles2 = 90
 
 ENT.Bone1 = "mixamorig:RightFoot"
 ENT.Bone2 = "mixamorig:LeftFoot"
@@ -54,38 +55,7 @@ ENT.Model = "models/spite/scarlet.mdl"
 
 ENT.IdleAnim = "idle"
 ENT.WalkAnim = "crawl"
-ENT.AttackAnim = "attack1"
-
---Sounds--
-ENT.DoorBreak = Sound("npc/zombie/zombie_pound_door.wav")
-
-ENT.alertSounds = {
-	"dalrp/npc/gemini/die1.wav",
-	"dalrp/npc/gemini/die2.wav",
-	"dalrp/npc/gemini/pain1.wav",
-	"dalrp/npc/gemini/pain2.wav",
-	"dalrp/npc/gemini/pain3.wav"
-}
-
-ENT.hitSounds = {
-	"npc/zombie/claw_strike1.wav"
-}
-ENT.missSounds = {
-	"npc/zombie/claw_miss1.wav"
-}
-
-ENT.attackSounds = ENT.alertSounds
-ENT.deathSounds = ENT.alertSounds
-
-ENT.idleSounds = {
-	"physics/plastic/plastic_box_break1.wav",
-	"physics/plastic/plastic_box_break2.wav",
-	"npc/strider/strider_legstretch1.wav",
-	"npc/strider/strider_legstretch2.wav",
-	"npc/strider/strider_legstretch3.wav"
-}
-
-ENT.painSounds = ENT.alertSounds
+ENT.AttackAnim = ACT_MELEE_ATTACK1
 
 function ENT:Initialize()
 	if SERVER then
@@ -108,26 +78,4 @@ function ENT:Initialize()
 	self:CollisionSetup( self.CollisionSide, self.CollisionHeight, COLLISION_GROUP_NPC )
 	self:PhysicsInitShadow(true, true)
 	end
-
-end
-
-function ENT:CustomDeath( dmginfo )
-	if (math.random(0,4) == 4) then
-		nut.item.spawn("medical_plastic", self:GetPos()+ Vector(0,0,20))
-	end
-	if (math.random(0,4) == 4) then
-		nut.item.spawn("j_monster_claw", self:GetPos()+ Vector(0,0,20))
-	end	
-	self:TransformRagdoll( dmginfo )
-end
-
-function ENT:CustomInjure( dmginfo )
-	local attacker = dmginfo:GetAttacker()
-	if (attacker.IsPlayer() and attacker != self.Enemy) then
-		self:SetEnemy(attacker)
-	end
-end
-
-function ENT:FootSteps()
-	self:EmitSound("monsters/suitor/metal_walk0"..math.random(1, 3)..".mp3", 85) 
 end

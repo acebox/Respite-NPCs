@@ -27,7 +27,7 @@ ENT.FootStepTime = 1
 
 ENT.health = 10
 ENT.Speed = 15
-ENT.Damage = 15
+ENT.Damage = 10
 ENT.Persistent = true
 
 ENT.NextAttack = 0
@@ -129,7 +129,7 @@ end
 
 function ENT:IdleFunction()
 	self:Idle()
-	self:TeleportShortThink(3.5)
+	self:TeleportShortThink(3.5, self)
 end
 
 function ENT:CustomDeath( dmginfo )
@@ -140,94 +140,28 @@ function ENT:FootSteps()
 	self:EmitSound("horror/foot"..math.random(1, 4)..".wav", 70) 
 end
 
-function ENT:TeleportShortThink(waitTime)
-	
-	if( !self.NextTeleport ) then self.NextTeleport = CurTime(); end
+function ENT:TeleportShortThink(waitTime, target)
+	if(!target) then return end
+	if( !self.NextTeleport ) then self.NextTeleport = CurTime() end
 	
 	if( CurTime() >= self.NextTeleport ) then
 		local sound = self.teleportSounds[ math.random( #self.teleportSounds ) ]
 		self:EmitSound( sound, 100, math.random(40,50), 1, CHAN_AUTO )
 		
-		self:TeleportShort()
+		self:TeleportShort(target)
 		self.NextTeleport = CurTime() + waitTime;
 	end
 end
 
-function ENT:TeleportShort()
-	local location = self:GetPos() + Vector( math.random(-500, 500), math.random(-500, 500), 0 )
+function ENT:TeleportShort(target)
+	local location = target:GetPos() + Vector( math.random(-500, 500), math.random(-500, 500), 0 )
 	if(!util.IsInWorld(location)) then
-		location = self:GetPos() + Vector( math.random(-500, 500), math.random(-500, 500), 0 )
+		location = target:GetPos() + Vector( math.random(-500, 500), math.random(-500, 500), 0 )
 	end
 	self:SetPos(location)
-	--util.Decal("scorch", self:GetPos() - Vector(4,4,4), self:GetPos() - Vector(4,4,4))
+	util.Decal("scorch", self:GetPos() - Vector(4,4,4), self:GetPos() - Vector(4,4,4))
 end
 
 function ENT:CustomChaseEnemy()
-	self:TeleportShortThink(10)
+	self:TeleportShortThink(10, self:GetEnemy())
 end
-
-function ENT:AttackEffect( time, ent, dmg, type, reset )
-	timer.Simple(time, function() 
-		if !self:IsValid() then return end
-		if self:Health() < 0 then return end
-		if !self:CheckValid( ent ) then return end
-		if !self:CheckStatus() then return end
-		
-		if self:GetRangeTo( ent ) < self.AttackRange then
-			
-			ent:TakeDamage(dmg, self)	
-			
-			if ent:IsPlayer() or ent:IsNPC() then
-				-- self:BleedVisual2( 0.3, ent:GetPos() + Vector(0,0,50) )	
-				if(self.Launches) then
-					local moveAdd=Vector(0,0,350)
-						if not ent:IsOnGround() then
-							moveAdd=Vector(0,0,0)
-						end
-					ent:SetVelocity( moveAdd + ( ( self.Enemy:GetPos() - self:GetPos() ):GetNormal() * 150 ) )
-				end
-
-				self:HitSound()
-			end
-			
-			if ent:IsPlayer() then
-				ent:ViewPunch(Angle(math.random(-1, 1)*self.Damage, math.random(-1, 1)*self.Damage, math.random(-1, 1)*self.Damage))
-				
-				self:TeleportShort()
-			end
-			
-			if type == 1 then
-				local phys = ent:GetPhysicsObject()
-				if (phys != nil && phys != NULL && phys:IsValid() ) then
-					phys:ApplyForceCenter(self:GetForward():GetNormalized()*(self.PhysForce) + Vector(0, 0, 2))
-					ent:EmitSound(self.DoorBreak)
-				end
-			elseif type == 2 then
-				if ent != NULL and ent.Hitsleft != nil then
-					if ent.Hitsleft > 0 then
-						ent.Hitsleft = ent.Hitsleft - self.HitPerDoor	
-						ent:EmitSound(self.DoorBreak)
-					end
-				end
-			end
-							
-		else	
-			--self:EmitSound("npc/infected_zombies/claw_miss_"..math.random(2)..".wav", math.random(75,95), math.random(65,95))
-			self:MissSound()
-		end
-		
-	end)
-
-	if reset == 1 then
-		timer.Simple( time + 0, function()
-			if !self:IsValid() then return end
-			if self:Health() < 0 then return end
-			if !self:CheckValid( ent ) then return end
-			if !self:CheckStatus() then return end
-			
-			self.IsAttacking = false
-			self:ResumeMovementFunctions()
-		end)
-	end
-end
-

@@ -48,3 +48,19 @@ function ENT:CustomThink()
 		self.nextAlpha = CurTime() + 1
 	end
 end
+
+function ENT:CustomThinkClient()
+	if CLIENT then
+		local pos = self:GetPos() + self:GetUp()
+		local dlight = DynamicLight(self:EntIndex())
+		dlight.Pos = pos
+		dlight.r = 255
+		dlight.g = 255
+		dlight.b = 255
+		dlight.Brightness = 1
+		dlight.Size = 32
+		dlight.Decay = 64
+		dlight.style = 5
+		dlight.DieTime = CurTime() + .1
+	end
+end

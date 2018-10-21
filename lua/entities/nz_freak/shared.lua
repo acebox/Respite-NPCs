@@ -40,6 +40,7 @@ ENT.AttackFinishTime = 0.8 --how long it takes for an attack to finish
 
 ENT.wanderType = 3
 ENT.idleTime = 10
+ENT.pitch = 90
 
 --Model Settings--
 ENT.Model = "models/prosperity/freak.mdl"
@@ -66,6 +67,8 @@ ENT.attackSounds = {
 }
 
 ENT.alertSounds = {
+	"dalrp/npc/freak/zombie_alert1.wav",
+	"dalrp/npc/freak/zombie_alert2.wav",
 	"dalrp/npc/freak/zombie_alert3.wav",
 	"dalrp/npc/freak/zo_attack1.wav",
 	"dalrp/npc/babu/alert2.wav",
@@ -73,23 +76,22 @@ ENT.alertSounds = {
 }
 
 ENT.deathSounds = {
-	"deadzone/lepotitsa/death1.wav",
-	"deadzone/lepotitsa/death2.wav",
-	"deadzone/lepotitsa/death3.wav",
-	"deadzone/lepotitsa/death4.wav",
+	"dalrp/npc/freak/zombie_die1.wav",
+	"dalrp/npc/freak/zombie_die2.wav"
 }
 
 ENT.idleSounds = {
-	"npc/freshdead/male/alert_no_enemy1.wav",
-	"npc/freshdead/male/alert_no_enemy2.wav",
-	"npc/freshdead/male/pain2.wav",
-	"npc/freshdead/male/pain4.wav",
+	"dalrp/npc/freak/zombie_idle1.wav",
+	"dalrp/npc/freak/zombie_idle2.wav",
+	"dalrp/npc/freak/zombie_voice_idle1.wav",
+	"dalrp/npc/freak/zombie_voice_idle2.wav",
+	"dalrp/npc/freak/zombie_voice_idle3.wav",
 }
 
 ENT.painSounds = {
 	"deadzone/lepotitsa/pain1.wav",
 	"deadzone/lepotitsa/pain2.wav",
-	"deadzone/lepotitsa/pain3.wav",
+	"deadzone/lepotitsa/pain3.wav"
 }
 
 ENT.hitSounds = {

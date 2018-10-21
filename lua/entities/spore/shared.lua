@@ -37,13 +37,13 @@ ENT.CollisionSide = 15
 ENT.Speed = 40
 ENT.WalkSpeedAnimation = 1.0
 
-ENT.health = 180
+ENT.health = 200
 ENT.Damage = 6
 
 ENT.PhysForce = 30000
-ENT.AttackRange = 50
-ENT.InitialAttackRange = 40
-ENT.DoorAttackRange = 40
+ENT.AttackRange = 65
+ENT.InitialAttackRange = 60
+ENT.DoorAttackRange = 25
 
 ENT.NextAttack = 0.45
 ENT.AttackFinishTime = 0.35 --how long it takes for an attack to finish
@@ -102,7 +102,7 @@ function ENT:Initialize()
 	
 	self.IsAttacking = false
 	
-	self.loco:SetStepHeight(35)
+	self.loco:SetStepHeight(40)
 	self.loco:SetAcceleration(400)
 	self.loco:SetDeceleration(900)
 
@@ -145,8 +145,8 @@ function ENT:Draw()
 	local TEMP_HeadPos = Vector(0,0,0)
 	local TEMP_NeckAng = Angle(0,0,0)
 	local TEMP_NeckPos = Vector(0,0,0)
-	local TEMP_LegR1Ang = Angle(5,0,0)
-	local TEMP_LegL1Ang = Angle(5,0,0)
+	local TEMP_LegR1Ang = Angle(0,0,0)
+	local TEMP_LegL1Ang = Angle(0,0,0)
 		
 	local TEMP_ZPos = 0
 	local TEMP_YAng = 0
@@ -157,21 +157,26 @@ function ENT:Draw()
 		TEMP_HeadAng = Angle(0,0,0)
 		TEMP_HeadPos = Vector(0,0,0)
 		TEMP_HeadScale = Vector(1,1,1)
-		TEMP_NeckAng = Angle(0,-5,0)
+		TEMP_NeckAng = Angle(0,3,0)
 		TEMP_NeckPos = Vector(0,0,0)
-
-	TEMP_HeadAng = TEMP_HeadAng+Angle(math.random(-15,25),math.random(-15,25),math.random(-15,25))
+		TEMP_LegR1Ang = Angle(0,0,0)
+		TEMP_LegL1Ang = Angle(0,0,0)
+     
+	local twitch_ang1 = math.random(-5,5)
+	
+	TEMP_HeadAng = TEMP_HeadAng+Angle(twitch_ang1,twitch_ang1,twitch_ang1)
+	TEMP_NeckAng = TEMP_HeadAng+Angle(twitch_ang1,twitch_ang1,twitch_ang1)
 	
 	-- if(self.PrevCycle==TEMP_Cyc) then
 		-- TEMP_NewCyc = TEMP_NewCyc+0.01
 	-- end
 	
-	if self.Twitcher then
-	self:ManipulateBoneAngles(self.HeadBone,TEMP_HeadAng)
-	self:ManipulateBonePosition(self.HeadBone,TEMP_HeadPos)
-	self:ManipulateBoneAngles(self.NeckBone,TEMP_NeckAng)
-	self:ManipulateBonePosition(self.NeckBone,TEMP_NeckPos)
-	-- self:ManipulateBoneScale( self.HeadBone,TEMP_HeadScale )
+	if self.Twitcher then	
+		self:ManipulateBoneAngles(self.HeadBone,TEMP_HeadAng)
+		self:ManipulateBonePosition(self.HeadBone,TEMP_HeadPos)
+		self:ManipulateBoneAngles(self.NeckBone,TEMP_NeckAng)
+		self:ManipulateBonePosition(self.NeckBone,TEMP_NeckPos)
+		-- self:ManipulateBoneScale( self.HeadBone,TEMP_HeadScale )
     end
 	
 	self:DrawModel()
@@ -194,6 +199,7 @@ end
 function ENT:CustomInjure( dmginfo )
 	local attacker = dmginfo:GetAttacker()
 	
+	if ( dmginfo:IsBulletDamage() ) then
 		local trace = {}
 		trace.start = attacker:GetShootPos()			
 		trace.endpos = trace.start + ( ( dmginfo:GetDamagePosition() - trace.start ) * 2 )  
@@ -202,7 +208,8 @@ function ENT:CustomInjure( dmginfo )
 			
 		local tr = util.TraceLine( trace )
 		hitgroup = tr.HitGroup
-					
+						
+	end	
 	
 	if (attacker.IsPlayer() and attacker != self.Enemy) then
 		self:SetEnemy(attacker)
@@ -225,14 +232,11 @@ function ENT:CustomInjure( dmginfo )
 	-- end	
 	-- end
 	
-	if ( dmginfo:IsBulletDamage() ) then
-	
-		if hitgroup == HITGROUP_HEAD then
-			self:EmitSound("hits/headshot_"..math.random(9)..".wav", 65)
-			dmginfo:ScaleDamage(6) --more damage
-		    else
-			dmginfo:ScaleDamage(0.3) --less damage
-		end
+	if hitgroup == HITGROUP_HEAD then
+		self:EmitSound("hits/headshot_"..math.random(9)..".wav", 60)
+		dmginfo:ScaleDamage(2) --more damage
+    else
+	    dmginfo:ScaleDamage(0.6) --less damage
 	end
 	
 	-- print(dmginfo:GetDamage())
@@ -240,5 +244,5 @@ function ENT:CustomInjure( dmginfo )
 end
 
 function ENT:FootSteps()
-	self:EmitSound( 'respite/spore/foot'  .. math.random(1,5) .. '.wav', 65, 100 )
+	self:EmitSound( 'respite/spore/foot'  .. math.random(1,5) .. '.wav', 65, math.random(90,100) )
 end

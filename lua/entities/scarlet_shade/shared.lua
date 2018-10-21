@@ -28,3 +28,28 @@ end
 function ENT:OnSpawn()
 	self:Shadow()
 end
+
+function ENT:Summon( )
+	posSummons = {
+		"resp_dolly_shade",
+		"resp_babu_shade",
+		"resp_baby_shade"
+	}
+
+	local ent = ents.Create(table.Random(posSummons))
+		
+	table.insert(self.Summons, ent)
+		
+	if ent:IsValid() and self:IsValid() then
+		local pos = self:FindSpot( "random", { type = 'hiding', radius = 5000 } )
+		if(!pos) then
+			return
+		end
+		ent:SetPos(self:GetPos() + self:GetForward() * 50)
+		ent:Spawn()
+		ent:SetOwner( self )
+	end
+	
+	self:IdleSound()
+	self:IdleSound()
+end

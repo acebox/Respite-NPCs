@@ -45,8 +45,9 @@ ENT.AttackFinishTime = 0.5
 --Model Settings--
 ENT.Model = "models/sin/leperkin.mdl"
 
-ENT.AttackAnim = "melee"
+ENT.AttackAnim = ACT_MELEE_ATTACK1
 
+--[[
 ENT.AttackAnims = {
 	"melee",
 	"melee_fast",
@@ -58,6 +59,7 @@ ENT.AttackAnims = {
 	"melee_01_blunt_weapon",
 	"frenzy_attack"
 }
+--]]
 
 ENT.IdleAnim = "idle"
 
@@ -257,6 +259,6 @@ function ENT:RangeAttack( ent )
 end
 
 function ENT:CustomAttack()
-	self.AttackAnim = self.AttackAnims[ math.random( #self.AttackAnims ) ]
+	--self.AttackAnim = self.AttackAnims[ math.random( #self.AttackAnims ) ]
 	self.WalkAnim = self.WalkAnims[ math.random( #self.WalkAnims ) ]
 end

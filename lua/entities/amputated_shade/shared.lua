@@ -26,6 +26,7 @@ function ENT:CustomDeath( dmginfo )
 	if (math.random(0,8) == 8) then
 		nut.item.spawn("j_scrap_memory", self:GetPos()+ Vector(0,0,20))
 	end
+	
 	util.Decal("scorch", self:GetPos() - Vector(4,4,4), self:GetPos() - Vector(4,4,4))
 	SafeRemoveEntity(self)
 end

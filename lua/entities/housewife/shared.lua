@@ -54,7 +54,7 @@ ENT.WalkAnim = "run"
 
 ENT.IdleAnim = "idle"
 
-ENT.AttackAnim = "attack1"
+ENT.AttackAnim = ACT_MELEE_ATTACK1
 
 
 --Sounds--
